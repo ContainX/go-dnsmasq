@@ -124,6 +124,11 @@ func main() {
 			Usage:  "Number of dots a name must have before an initial absolute query will be made (defaults to /etc/resolv.conf)",
 			EnvVar: "DNSMASQ_NDOTS",
 		},
+		cli.StringSliceFlag{
+			Name:   "alias",
+			Usage:  "Allows the ability to alias a domain to a stubzone.  (--alias mydomain.local/realdomain.com)",
+			EnvVar: "DNSMASQ_ALIAS",
+		},
 		cli.BoolFlag{
 			Name:   "round-robin",
 			Usage:  "Enable round robin of A/AAAA records",
@@ -245,6 +250,18 @@ func main() {
 
 		if err := server.CheckConfig(config); err != nil {
 			log.Fatal(err.Error())
+		}
+
+		if aliases := c.StringSlice("alias"); len(aliases) > 0 {
+			aliasmap := make(map[string]string)
+			for _, a := range aliases {
+				segments := strings.Split(a, "/")
+				if len(segments) != 2 || len(segments[0]) == 0 || len(segments[1]) == 0 {
+					log.Fatalf("The --alias argument is invalid")
+				}
+				aliasmap[segments[0]] = segments[1]
+			}
+			config.Alias = &aliasmap
 		}
 
 		if stubzones := c.StringSlice("stubzones"); len(stubzones) > 0 {

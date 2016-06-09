@@ -228,10 +228,24 @@ func (s *server) forwardQuery(req *dns.Msg, tcp bool) (*dns.Msg, error) {
 	var err error
 
 	nservers = s.config.Nameservers
+	origin := req.Question[0].Name
+
+	// check to see if we have an alias and modify it for the target
+	for alias, target := range *s.config.Alias {
+		log.Debugf("Looking for %s against alias: %s", req.Question[0].Name, alias)
+		if strings.HasSuffix(req.Question[0].Name, alias) {
+			log.Debugf("Query - Alias: %s has  match for %s", req.Question[0].Name, target)
+			req.Question[0].Name = strings.Replace(req.Question[0].Name, alias, target, 1)
+			log.Debugf("Query - Alias: final %s", req)
+			break
+		}
+	}
 
 	// Check whether the name matches a stub zone
 	for zone, srv := range *s.config.Stub {
+		log.Debugf("Looking for stub: %s against zone: %s", req.Question[0].Name, zone)
 		if strings.HasSuffix(req.Question[0].Name, zone) {
+			log.Debugf("Has suffix for zone:%s, servers: %s", req.Question[0].Name, srv)
 			nservers = srv
 			StatsStubForwardCount.Inc(1)
 			break
@@ -264,6 +278,9 @@ func (s *server) forwardQuery(req *dns.Msg, tcp bool) (*dns.Msg, error) {
 			case dns.RcodeRefused:
 				fallthrough
 			case dns.RcodeNotImplemented:
+				if r != nil {
+					r.Question[0].Name = origin
+				}
 				return r, err
 			}
 		}

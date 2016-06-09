@@ -56,6 +56,9 @@ type Config struct {
 
 	// Stub zones support. Map contains domainname -> nameserver:port
 	Stub *map[string][]string
+
+	// Alias support - source domain : target domain
+	Alias *map[string]string
 }
 
 func ResolvConf(config *Config, ctx *cli.Context) error {
@@ -114,6 +117,7 @@ func CheckConfig(config *Config) error {
 
 	stubmap := make(map[string][]string)
 	config.Stub = &stubmap
+	config.Alias = &map[string]string{}
 	return nil
 }
 
